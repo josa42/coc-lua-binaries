@@ -1,0 +1,38 @@
+name: update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - run: |
+        git submodule update --init --remote
+        git status --short || test $? = 1
+        echo "HAS_CHANGES=$(git status --short | grep 'lua-language-server' || test $? = 1)" >> $GITHUB_ENV
+        echo "DESCRIBE=$(cd lua-language-server && git describe --always --tags)" >> $GITHUB_ENV
+
+    - if: env.HAS_CHANGES != ''
+      uses: EndBug/add-and-commit@v5
+      with:
+        add: 'lua-language-server'
+        push: true
+        author_name:  Github action
+        author_email: josa@gesell.me
+        message: 'sumneko/lua-language-server: ${{ env.DESCRIBE }}'
+      env:
+        GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+
+    - if: env.HAS_CHANGES != ''
+      uses: benc-uk/workflow-dispatch@v1
+      with:
+        workflow: build
+        ref: master
+        token: ${{ secrets.PERSONAL_TOKEN }}

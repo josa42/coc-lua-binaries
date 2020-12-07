@@ -1,5 +1,8 @@
 name: build
-on: push
+
+on:
+  workflow_dispatch:
+
 jobs:
   compile:
     runs-on: '${{ matrix.os }}'
@@ -10,8 +13,8 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v1
-      with: { ref: refs/heads/master, submodules : recursive }
+    - uses: actions/checkout@v2
+      with: { submodules : recursive }
 
     - uses: actboy168/setup-luamake@master
 
@@ -49,28 +52,25 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
 
-      - run: find .
-
       - run: |
-          echo 'TAG_NAME=nightly' >> $GITHUB_ENV
+          echo 'TAG_NAME=latest' >> $GITHUB_ENV
           echo 'SUBJECT=lua-language-server build' >> $GITHUB_ENV
 
       - uses: dev-drprasad/delete-tag-and-release@v0.1.2
         env:  { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
-        with: { delete_release: false, tag_name: nightly }
+        with: { delete_release: false, tag_name: latest }
 
       - uses: meeDamian/github-release@2.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.TAG_NAME }}
           name: ${{ needs.linux.outputs.release }}
-          prerelease: ${{ env.TAG_NAME == 'nightly' }}
+          prerelease: ${{ env.TAG_NAME == 'latest' }}
           commitish: ${{ github.sha }}
           gzip: false
-          allow_override: ${{ env.TAG_NAME == 'nightly' }}
+          allow_override: ${{ env.TAG_NAME == 'latest' }}
           files: |
             lua-language-server-macos.tar.gz:./lua-language-server/lua-language-server-macos-latest.tar.gz
             lua-language-server-ubuntu.tar.gz:./lua-language-server/lua-language-server-ubuntu-latest.tar.gz
             lua-language-server-windows.tar.gz:./lua-language-server/lua-language-server-windows-latest.tar.gz
-          # body: |
-          #   ${{ env.SUBJECT }}
+
