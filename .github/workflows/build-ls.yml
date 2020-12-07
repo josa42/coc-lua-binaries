@@ -6,24 +6,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest] # windows-latest,
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
     steps:
+
     - uses: actions/checkout@v1
-      with:
-        ref: refs/heads/master
-        submodules : recursive
+      with: { ref: refs/heads/master, submodules : recursive }
+
     - uses: actboy168/setup-luamake@master
+
+    # Build
+
     - if: runner.os != 'Linux'
       run: luamake
       working-directory: 'lua-language-server/'
+
     - if: runner.os == 'Linux'
       run: luamake -gcc gcc-8 -gxx g++-8
       working-directory: 'lua-language-server/'
 
+    # Clean up
+
     - run: |
-        rm -rf build
+        rm -r build
         chmod +x bin/*/lua-language-server
       working-directory: 'lua-language-server/'
+
+    # Create Artifact
 
     - run: |
         tar cfz lua-language-server-${{ matrix.os }}.tar.gz lua-language-server
@@ -62,5 +71,6 @@ jobs:
           files: |
             lua-language-server-macos.tar.gz:./lua-language-server/lua-language-server-macos-latest.tar.gz
             lua-language-server-ubuntu.tar.gz:./lua-language-server/lua-language-server-ubuntu-latest.tar.gz
-          body: |
-            ${{ env.SUBJECT }}
+            lua-language-server-windows.tar.gz:./lua-language-server/lua-language-server-windows-latest.tar.gz
+          # body: |
+          #   ${{ env.SUBJECT }}
