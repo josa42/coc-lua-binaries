@@ -71,6 +71,6 @@ jobs:
           allow_override: ${{ env.TAG_NAME == 'latest' }}
           files: |
             lua-language-server-macos.tar.gz:./lua-language-server/lua-language-server-macos-latest.tar.gz
-            lua-language-server-ubuntu.tar.gz:./lua-language-server/lua-language-server-ubuntu-latest.tar.gz
+            lua-language-server-linux.tar.gz:./lua-language-server/lua-language-server-ubuntu-latest.tar.gz
             lua-language-server-windows.tar.gz:./lua-language-server/lua-language-server-windows-latest.tar.gz
 
