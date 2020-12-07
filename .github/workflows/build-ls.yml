@@ -1,0 +1,66 @@
+name: build
+on: push
+jobs:
+  compile:
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest] # windows-latest,
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        ref: refs/heads/master
+        submodules : recursive
+    - uses: actboy168/setup-luamake@master
+    - if: runner.os != 'Linux'
+      run: luamake
+      working-directory: 'lua-language-server/'
+    - if: runner.os == 'Linux'
+      run: luamake -gcc gcc-8 -gxx g++-8
+      working-directory: 'lua-language-server/'
+
+    - run: |
+        rm -rf build
+        chmod +x bin/*/lua-language-server
+      working-directory: 'lua-language-server/'
+
+    - run: |
+        tar cfz lua-language-server-${{ matrix.os }}.tar.gz lua-language-server
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: lua-language-server
+        path: lua-language-server-${{ matrix.os }}.tar.gz
+        retention-days: 1
+
+  publish:
+    needs: [compile]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+
+      - run: find .
+
+      - run: |
+          echo 'TAG_NAME=nightly' >> $GITHUB_ENV
+          echo 'SUBJECT=lua-language-server build' >> $GITHUB_ENV
+
+      - uses: dev-drprasad/delete-tag-and-release@v0.1.2
+        env:  { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        with: { delete_release: false, tag_name: nightly }
+
+      - uses: meeDamian/github-release@2.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.TAG_NAME }}
+          name: ${{ needs.linux.outputs.release }}
+          prerelease: ${{ env.TAG_NAME == 'nightly' }}
+          commitish: ${{ github.sha }}
+          gzip: false
+          allow_override: ${{ env.TAG_NAME == 'nightly' }}
+          files: |
+            lua-language-server-macos.tar.gz:./lua-language-server/lua-language-server-macos-latest.tar.gz
+            lua-language-server-ubuntu.tar.gz:./lua-language-server/lua-language-server-ubuntu-latest.tar.gz
+          body: |
+            ${{ env.SUBJECT }}
