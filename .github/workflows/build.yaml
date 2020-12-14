@@ -2,19 +2,51 @@ name: build
 
 on:
   workflow_dispatch:
+  push: { paths: [.github/workflows/build.yaml] }
 
 jobs:
+  info:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with: { submodules : recursive }
+
+    # Version Info
+
+    - run: 'git log -1 --date=iso --format="{ \"date\": \"%cd\", \"commit\": \"%H\" }" > ../version.json'
+      working-directory: 'lua-language-server/'
+      continue-on-error: true
+
+    - run: |
+        version=$(cat changelog.md | grep '##' | head -n1 | sed 's/^## //')
+        jq '. | .version="'$version'"' ../version.json > ../version.json.bak && mv ../version.json{.bak,}
+      working-directory: 'lua-language-server/'
+      continue-on-error: true
+
+    - run: jq -C . version.json
+      continue-on-error: true
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: info
+        path: version.json
+        retention-days: 1
+
   compile:
+    needs: [info]
+
     runs-on: '${{ matrix.os }}'
+
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-
     - uses: actions/checkout@v2
       with: { submodules : recursive }
+    - uses: actions/download-artifact@v2
 
     - uses: actboy168/setup-luamake@master
 
@@ -33,6 +65,7 @@ jobs:
     - run: |
         rm -r build
         chmod +x bin/*/lua-language-server
+        cp ../info/version.json .
       working-directory: 'lua-language-server/'
 
     # Create Artifact
@@ -42,13 +75,15 @@ jobs:
 
     - uses: actions/upload-artifact@v2
       with:
-        name: lua-language-server
+        name: build
         path: lua-language-server-${{ matrix.os }}.tar.gz
         retention-days: 1
 
   publish:
-    needs: [compile]
+    needs: [compile, info]
+
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/download-artifact@v2
 
@@ -70,7 +105,8 @@ jobs:
           gzip: false
           allow_override: ${{ env.TAG_NAME == 'latest' }}
           files: |
-            lua-language-server-macos.tar.gz:./lua-language-server/lua-language-server-macos-latest.tar.gz
-            lua-language-server-linux.tar.gz:./lua-language-server/lua-language-server-ubuntu-latest.tar.gz
-            lua-language-server-windows.tar.gz:./lua-language-server/lua-language-server-windows-latest.tar.gz
+            lua-language-server-macos.tar.gz:./build/lua-language-server-macos-latest.tar.gz
+            lua-language-server-linux.tar.gz:./build/lua-language-server-ubuntu-latest.tar.gz
+            lua-language-server-windows.tar.gz:./build/lua-language-server-windows-latest.tar.gz
+            version.json:./info/version.json
 
