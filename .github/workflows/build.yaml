@@ -8,9 +8,21 @@ jobs:
   info:
     runs-on: ubuntu-latest
 
+    outputs:
+      version: ${{ steps.describe.version }}
+
     steps:
     - uses: actions/checkout@v2
-      with: { submodules : recursive }
+      with: { submodules : recursive, fetch-depth: 0 }
+
+    - id: describe
+      run: |
+        git fetch --tags --force
+        echo "DESCRIBE=$(git describe --always --tags)" >> $GITHUB_ENV
+        echo "DESCRIBE_TAG=$(git describe --tags --exact-match --exclude latest 2>/dev/null)" >> $GITHUB_ENV
+        echo "::set-output name=describe::$(git describe --always --tags)"
+        echo "::set-output name=version::$(git describe --tags --exact-match --exclude latest 2>/dev/null)"
+      working-directory: lua-language-server
 
     # Version Info
 
@@ -19,7 +31,7 @@ jobs:
       continue-on-error: true
 
     - run: |
-        version=$(cat changelog.md | grep '##' | head -n1 | sed 's/^## //')
+        version=$( [[ "${{ env.DESCRIBE_TAG }}" != "" ]] && echo "${{ env.DESCRIBE_TAG }}" || echo "${{ env.DESCRIBE }}")
         jq '. | .version="'$version'"' ../version.json > ../version.json.bak && mv ../version.json{.bak,}
       working-directory: 'lua-language-server/'
       continue-on-error: true
@@ -84,18 +96,31 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        type: [ latest, version ]
+
     steps:
       - uses: actions/download-artifact@v2
 
-      - run: |
+      - if: matrix.type == 'latest'
+        run: |
           echo 'TAG_NAME=latest' >> $GITHUB_ENV
-          echo 'SUBJECT=lua-language-server build' >> $GITHUB_ENV
+          echo 'SUBJECT=lua-language-server latest' >> $GITHUB_ENV
 
-      - uses: dev-drprasad/delete-tag-and-release@v0.1.2
+      - if: matrix.type == 'version' && needs.info.outputs.version != ''
+        run: |
+          echo 'TAG_NAME=${{ needs.info.outputs.version }}' >> $GITHUB_ENV
+          echo 'SUBJECT=lua-language-server ${{ needs.info.outputs.version }}' >> $GITHUB_ENV
+
+      - if: matrix.type == 'latest'
+        uses: dev-drprasad/delete-tag-and-release@v0.1.2
         env:  { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
         with: { delete_release: false, tag_name: latest }
 
-      - uses: meeDamian/github-release@2.0
+      - if: env.TAG_NAME != ''
+        uses: meeDamian/github-release@2.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.TAG_NAME }}
