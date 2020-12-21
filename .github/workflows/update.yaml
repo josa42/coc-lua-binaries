@@ -18,7 +18,17 @@ jobs:
         git submodule update --init --remote
         git status --short || test $? = 1
         echo "HAS_CHANGES=$(git status --short | grep 'lua-language-server' || test $? = 1)" >> $GITHUB_ENV
-        echo "DESCRIBE=$(cd lua-language-server && git describe --always --tags)" >> $GITHUB_ENV
+
+    - run: |
+        git fetch --tags --force
+        echo "DESCRIBE=$(git describe --always --tags)" >> $GITHUB_ENV
+        echo "DESCRIBE_TAG=$(git describe --tags --exact-match --exclude latest 2>/dev/null)" >> $GITHUB_ENV
+      working-directory: lua-language-server
+
+    - if: env.HAS_CHANGES != '' && env.DESCRIBE_TAG != ''
+      run: |
+        echo "COMMIT_TAG=lua-language-server@${{ env.DESCRIBE_TAG }} --force" >> $GITHUB_ENV
+      working-directory: lua-language-server
 
     - if: env.HAS_CHANGES != ''
       uses: EndBug/add-and-commit@v5
@@ -28,6 +38,7 @@ jobs:
         author_name:  Github action
         author_email: josa@gesell.me
         message: 'sumneko/lua-language-server: ${{ env.DESCRIBE }}'
+        tag: '${{ env.COMMIT_TAG }}'
       env:
         GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
 
