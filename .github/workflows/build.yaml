@@ -9,19 +9,18 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      version: ${{ steps.describe.version }}
+      version: ${{ steps.info.outputs.version }}
+      release_version: ${{ steps.info.outputs.release_version }}
 
     steps:
     - uses: actions/checkout@v2
       with: { submodules : recursive, fetch-depth: 0 }
 
-    - id: describe
+    - id: info
       run: |
         git fetch --tags --force
-        echo "DESCRIBE=$(git describe --always --tags)" >> $GITHUB_ENV
-        echo "DESCRIBE_TAG=$(git describe --tags --exact-match --exclude latest 2>/dev/null)" >> $GITHUB_ENV
-        echo "::set-output name=describe::$(git describe --always --tags)"
-        echo "::set-output name=version::$(git describe --tags --exact-match --exclude latest 2>/dev/null)"
+        echo "::set-output name=version::$(git describe --always --tags)"
+        echo "::set-output name=release_version::$(git describe --tags --exact-match --exclude latest 2>/dev/null)"
       working-directory: lua-language-server
 
     # Version Info
@@ -31,8 +30,7 @@ jobs:
       continue-on-error: true
 
     - run: |
-        version=$( [[ "${{ env.DESCRIBE_TAG }}" != "" ]] && echo "${{ env.DESCRIBE_TAG }}" || echo "${{ env.DESCRIBE }}")
-        jq '. | .version="'$version'"' ../version.json > ../version.json.bak && mv ../version.json{.bak,}
+        jq '. | .version="${{ steps.info.outputs.version }}"' ../version.json > ../version.json.bak && mv ../version.json{.bak,}
       working-directory: 'lua-language-server/'
       continue-on-error: true
 
@@ -107,12 +105,12 @@ jobs:
       - if: matrix.type == 'latest'
         run: |
           echo 'TAG_NAME=latest' >> $GITHUB_ENV
-          echo 'SUBJECT=lua-language-server latest' >> $GITHUB_ENV
+          echo 'SUBJECT=lua-language-server@${{ needs.info.outputs.version }}' >> $GITHUB_ENV
 
-      - if: matrix.type == 'version' && needs.info.outputs.version != ''
+      - if: matrix.type == 'version' && needs.info.outputs.release_version != ''
         run: |
-          echo 'TAG_NAME=${{ needs.info.outputs.version }}' >> $GITHUB_ENV
-          echo 'SUBJECT=lua-language-server ${{ needs.info.outputs.version }}' >> $GITHUB_ENV
+          echo 'TAG_NAME=lua-language-server@${{ needs.info.outputs.release_version }}' >> $GITHUB_ENV
+          echo 'SUBJECT=lua-language-server ${{ needs.info.outputs.release_version }}' >> $GITHUB_ENV
 
       - if: matrix.type == 'latest'
         uses: dev-drprasad/delete-tag-and-release@v0.1.2
@@ -124,7 +122,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.TAG_NAME }}
-          name: ${{ needs.linux.outputs.release }}
+          name: ${{ env.SUBJECT }}
           prerelease: ${{ env.TAG_NAME == 'latest' }}
           commitish: ${{ github.sha }}
           gzip: false
