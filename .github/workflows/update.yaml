@@ -3,7 +3,7 @@ name: update
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '0 * * * *'
   push: { paths: [.github/workflows/update.yaml] }
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
 
     - if: env.HAS_CHANGES != '' && env.DESCRIBE_TAG != ''
       run: |
-        echo "COMMIT_TAG=lua-language-server@${{ env.DESCRIBE_TAG }} --force" >> $GITHUB_ENV
+        echo "COMMIT_TAG=${{ env.DESCRIBE_TAG }} --force" >> $GITHUB_ENV
       working-directory: lua-language-server
 
     - if: env.HAS_CHANGES != ''

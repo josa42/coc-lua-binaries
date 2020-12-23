@@ -109,8 +109,8 @@ jobs:
 
       - if: matrix.type == 'version' && needs.info.outputs.release_version != ''
         run: |
-          echo 'TAG_NAME=lua-language-server@${{ needs.info.outputs.release_version }}' >> $GITHUB_ENV
-          echo 'SUBJECT=lua-language-server ${{ needs.info.outputs.release_version }}' >> $GITHUB_ENV
+          echo 'TAG_NAME=${{ needs.info.outputs.release_version }}' >> $GITHUB_ENV
+          echo 'SUBJECT=lua-language-server@${{ needs.info.outputs.release_version }}' >> $GITHUB_ENV
 
       - if: matrix.type == 'latest'
         uses: dev-drprasad/delete-tag-and-release@v0.1.2
