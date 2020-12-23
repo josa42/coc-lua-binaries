@@ -37,10 +37,20 @@ jobs:
     - run: jq -C . version.json
       continue-on-error: true
 
+    - run: |
+       ./.github/scripts/get_release_note.sh > release.txt
+       cat release.txt
+
     - uses: actions/upload-artifact@v2
       with:
         name: info
         path: version.json
+        retention-days: 1
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: info
+        path: release.txt
         retention-days: 1
 
   compile:
@@ -117,6 +127,11 @@ jobs:
         env:  { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
         with: { delete_release: false, tag_name: latest }
 
+      - run: |
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          cat ./info/release.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - if: env.TAG_NAME != ''
         uses: meeDamian/github-release@2.0
         with:
@@ -124,9 +139,10 @@ jobs:
           tag: ${{ env.TAG_NAME }}
           name: ${{ env.SUBJECT }}
           prerelease: ${{ env.TAG_NAME == 'latest' }}
+          body: ${{ env.RELEASE_BODY }}
           commitish: ${{ github.sha }}
           gzip: false
-          allow_override: ${{ env.TAG_NAME == 'latest' }}
+          allow_override: true
           files: |
             lua-language-server-macos.tar.gz:./build/lua-language-server-macos-latest.tar.gz
             lua-language-server-linux.tar.gz:./build/lua-language-server-ubuntu-latest.tar.gz
