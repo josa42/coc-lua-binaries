@@ -80,18 +80,10 @@ jobs:
         3rd\luamake\luamake.exe rebuild
       working-directory: 'lua-language-server/'
 
-    - if: runner.os == 'Linux'
+    - if: runner.os == 'Linux' || runner.os == 'macOS'
       run: |
         cd 3rd/luamake
-        ninja -f ninja/linux.ninja
-        cd ../..
-        ./3rd/luamake/luamake rebuild
-      working-directory: 'lua-language-server/'
-
-    - if: runner.os == 'macOS'
-      run: |
-        cd 3rd/luamake
-        ninja -f ninja/macos.ninja
+        ninja -f ninja/$(echo $RUNNER_OS | tr '[:upper:]' '[:lower:]').ninja
         cd ../..
         ./3rd/luamake/luamake rebuild
       working-directory: 'lua-language-server/'
