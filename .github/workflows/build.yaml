@@ -72,12 +72,28 @@ jobs:
 
     # Build
 
-    - if: runner.os != 'Linux'
-      run: luamake
+    - if: runner.os == 'Windows'
+      run: |
+        cd 3rd\luamake
+        tools\ninja.exe -f ninja\msvc.ninja
+        cd ..\..
+        3rd\luamake\luamake.exe rebuild
       working-directory: 'lua-language-server/'
 
     - if: runner.os == 'Linux'
-      run: luamake -gcc gcc-8 -gxx g++-8
+      run: |
+        cd 3rd/luamake
+        ninja -f ninja/linux.ninja
+        cd ../..
+        ./3rd/luamake/luamake rebuild
+      working-directory: 'lua-language-server/'
+
+    - if: runner.os == 'macOS'
+      run: |
+        cd 3rd/luamake
+        ninja -f ninja/macos.ninja
+        cd ../..
+        ./3rd/luamake/luamake rebuild
       working-directory: 'lua-language-server/'
 
     # Clean up
