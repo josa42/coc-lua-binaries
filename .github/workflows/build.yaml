@@ -72,25 +72,29 @@ jobs:
 
     # Build
 
-    - if: runner.os == 'Windows'
+    - name: Build (${{ runner.os }})
+      if: runner.os == 'Windows'
       run: |
         cd 3rd\luamake
-        tools\ninja.exe -f ninja\msvc.ninja
+        compile\install.bat
         cd ..\..
         3rd\luamake\luamake.exe rebuild
       working-directory: 'lua-language-server/'
 
-    - if: runner.os == 'Linux' || runner.os == 'macOS'
+    - name: Build (${{ runner.os }})
+      if: runner.os == 'Linux' || runner.os == 'macOS'
       run: |
         cd 3rd/luamake
-        ninja -f ninja/$(echo $RUNNER_OS | tr '[:upper:]' '[:lower:]').ninja
+        chmod +x ./compile/install.sh
+        ./compile/install.sh
         cd ../..
         ./3rd/luamake/luamake rebuild
       working-directory: 'lua-language-server/'
 
     # Clean up
 
-    - run: |
+    - name: Cleanup
+      run: |
         rm -r build
         chmod +x bin/*/lua-language-server
         cp ../info/version.json .
@@ -98,7 +102,8 @@ jobs:
 
     # Create Artifact
 
-    - run: |
+    - name: Archive
+      run: |
         tar cfz lua-language-server-${{ matrix.os }}.tar.gz lua-language-server
 
     - uses: actions/upload-artifact@v2
